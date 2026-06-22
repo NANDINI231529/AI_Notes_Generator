@@ -1,4 +1,5 @@
 import { Calendar, Trash2 } from "lucide-react";
+import { cleanNoteText } from "../utils/notes.js";
 
 export default function NoteCard({ note, onDelete }) {
   const date = new Date(note.created_at).toLocaleDateString();
@@ -12,7 +13,7 @@ export default function NoteCard({ note, onDelete }) {
           {date}
         </p>
       </div>
-      <p>{note.short_notes}</p>
+      <p>{cleanNoteText(note.short_notes)}</p>
       {onDelete && (
         <button className="ghost danger" onClick={() => onDelete(note.id)}>
           <Trash2 size={17} />

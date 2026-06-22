@@ -17,9 +17,9 @@ export const authApi = {
 };
 
 export const documentApi = {
-  upload: (file) => {
+  upload: (files) => {
     const formData = new FormData();
-    formData.append("file", file);
+    files.forEach((file) => formData.append("files", file));
     return api.post("/upload/", formData, {
       headers: { "Content-Type": "multipart/form-data" },
     });

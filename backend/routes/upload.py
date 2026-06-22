@@ -18,32 +18,54 @@ UPLOAD_DIR.mkdir(exist_ok=True)
 
 @router.post("/", response_model=DocumentOut, status_code=status.HTTP_201_CREATED)
 async def upload_document(
-    file: UploadFile = File(...),
+    files: list[UploadFile] = File(...),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    ext = Path(file.filename or "").suffix.lower()
-    if ext not in ALLOWED_EXTENSIONS:
-        raise HTTPException(status_code=400, detail="Upload PDF, DOCX, TXT, JPG, or PNG files only")
+    if not files:
+        raise HTTPException(status_code=400, detail="Select at least one file")
 
-    content = await file.read()
-    try:
-        extracted_text = extract_text_from_upload(file.filename or "upload", content)
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-    except Exception as exc:
-        raise HTTPException(status_code=422, detail="Could not extract text from this file") from exc
+    extracted_sections: list[str] = []
+    stored_filenames: list[str] = []
+    content_types: set[str] = set()
 
-    if not extracted_text.strip():
-        raise HTTPException(status_code=422, detail="No readable text found in this file")
+    for file in files:
+        original_name = file.filename or "upload"
+        ext = Path(original_name).suffix.lower()
+        if ext not in ALLOWED_EXTENSIONS:
+            raise HTTPException(
+                status_code=400,
+                detail=f"{original_name}: upload PDF, DOCX, TXT, JPG, or PNG files only",
+            )
 
-    stored_name = f"{uuid4().hex}{ext}"
-    (UPLOAD_DIR / stored_name).write_bytes(content)
+        content = await file.read()
+        try:
+            extracted_text = extract_text_from_upload(original_name, content)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=f"{original_name}: {exc}") from exc
+        except Exception as exc:
+            raise HTTPException(status_code=422, detail=f"{original_name}: could not extract text") from exc
+
+        if not extracted_text.strip():
+            raise HTTPException(status_code=422, detail=f"{original_name}: no readable text found")
+
+        stored_name = f"{uuid4().hex}{ext}"
+        (UPLOAD_DIR / stored_name).write_bytes(content)
+        stored_filenames.append(original_name)
+        content_types.add(file.content_type or "application/octet-stream")
+        extracted_sections.append(f"Source file: {original_name}\n\n{extracted_text.strip()}")
+
+    combined_text = "\n\n---\n\n".join(extracted_sections)
+    display_name = stored_filenames[0]
+    if len(stored_filenames) > 1:
+        display_name = f"{len(stored_filenames)} files: {', '.join(stored_filenames[:3])}"
+    if len(stored_filenames) > 3:
+        display_name += f", +{len(stored_filenames) - 3} more"
 
     document = Document(
-        filename=file.filename or stored_name,
-        content_type=file.content_type or "application/octet-stream",
-        extracted_text=extracted_text,
+        filename=display_name,
+        content_type="mixed" if len(content_types) > 1 else next(iter(content_types)),
+        extracted_text=combined_text,
         user_id=current_user.id,
     )
     db.add(document)

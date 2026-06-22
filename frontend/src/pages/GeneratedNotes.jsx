@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar.jsx";
 import Sidebar from "../components/Sidebar.jsx";
 import { notesApi } from "../services/api.js";
+import { cleanNoteText } from "../utils/notes.js";
 
 export default function GeneratedNotes() {
   const navigate = useNavigate();
@@ -10,6 +11,9 @@ export default function GeneratedNotes() {
   const [mode, setMode] = useState("short");
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
+  const displayedNotes = generated
+    ? cleanNoteText(mode === "short" ? generated.short_notes : generated.detailed_notes)
+    : "";
 
   const save = async () => {
     if (!generated) return;
@@ -19,8 +23,8 @@ export default function GeneratedNotes() {
       await notesApi.save({
         document_id: generated.document_id,
         title: generated.title,
-        short_notes: generated.short_notes,
-        detailed_notes: generated.detailed_notes,
+        short_notes: cleanNoteText(generated.short_notes),
+        detailed_notes: cleanNoteText(generated.detailed_notes),
       });
       setMessage("Notes saved to your profile.");
     } catch (err) {
@@ -53,7 +57,7 @@ export default function GeneratedNotes() {
               )}
             </div>
             {generated ? (
-              <pre className="notes-output">{mode === "short" ? generated.short_notes : generated.detailed_notes}</pre>
+              <pre className="notes-output">{displayedNotes}</pre>
             ) : (
               <button className="primary" onClick={() => navigate("/dashboard")}>Upload a document</button>
             )}
