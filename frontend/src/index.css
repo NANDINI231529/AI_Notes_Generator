@@ -392,6 +392,8 @@ input:focus {
   font-size: 16px;
   line-height: 1.7;
   white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .profile-panel {
@@ -431,12 +433,21 @@ input:focus {
 .note-card h3 {
   margin: 0 0 8px;
   color: #341753;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .note-card p {
   margin: 0;
   color: #655272;
   line-height: 1.6;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2000;       /* limits to 6 lines, adjust as you like */
+  -webkit-box-orient: vertical;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .note-date {
